@@ -15,13 +15,13 @@ JsonParsingResult JsonObjectParser::TryParseObject(HistoricalReader* reader) {
 
   // if we don't read an opening { character, then the next token can't be an
   // object
-  char last_byte = reader->TestNextByteSkipWhitespace();
+  char last_byte = reader->TestNextByte(true);
   if (last_byte != '{') {
     return JsonParsingResult::kTypeMismatch;
   }
 
   // at this point it has to be an object, either valid or invalid
-  reader->GetNextByteSkipWhitespace();
+  reader->GetNextByte(true);
 
   // read key/value pairs
   bool has_to_read_key = false;
@@ -39,8 +39,7 @@ JsonParsingResult JsonObjectParser::TryParseObject(HistoricalReader* reader) {
     // valid json value, otherwise this is an invalid object
     if (result == JsonParsingResult::kValidTypeMatch) {
       // read the colon
-      if (!reader->HasNextByte() ||
-          (last_byte = reader->GetNextByteSkipWhitespace()) != ':') {
+      if (!reader->HasNextByte() || reader->GetNextByte(true) != ':') {
         return JsonParsingResult::kInvalidTypeMatch;
       }
 
@@ -59,7 +58,7 @@ JsonParsingResult JsonObjectParser::TryParseObject(HistoricalReader* reader) {
     // 2.we didn't read a kv pair, then we must read a '}'
     // otherwise, this is an invalid object
     bool read_a_kv = result == JsonParsingResult::kValidTypeMatch;
-    last_byte = reader->GetNextByteSkipWhitespace();
+    last_byte = reader->GetNextByte(true);
     if ((read_a_kv && last_byte != ',' && last_byte != '}') ||
         (!read_a_kv && last_byte != '}')) {
       return JsonParsingResult::kInvalidTypeMatch;

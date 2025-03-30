@@ -18,11 +18,9 @@ class HistoricalReader {
 
   bool HasNextByte() const;
 
-  char TestNextByteSkipWhitespace();
+  char TestNextByte(bool skip_white_space = false);
 
-  char GetNextByteSkipWhitespace();
-
-  char GetNextByteNoSkipWhitespace();
+  char GetNextByte(bool skip_white_space = false);
 
   string GetHistory() const;
 

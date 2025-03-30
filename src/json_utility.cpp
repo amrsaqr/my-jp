@@ -14,18 +14,22 @@
 JsonParsingResult JsonUtility::TryParseJsonConstant(HistoricalReader* reader,
                                                     const char* const str,
                                                     const size_t len) {
-  size_t mismatch_index = 0;
-  for (size_t i = 0; i < len; ++i, ++mismatch_index) {
-    if (!reader->HasNextByte() ||
-        reader->TestNextByteSkipWhitespace() != str[i]) {
+  if (len <= 0) {
+    return JsonParsingResult::kValidTypeMatch;
+  }
+
+  if (!reader->HasNextByte() || reader->TestNextByte(true) != str[0]) {
+    return JsonParsingResult::kTypeMismatch;
+  }
+  reader->GetNextByte(true);
+
+  size_t mismatch_index = 1;
+  for (size_t i = 1; i < len; ++i, ++mismatch_index) {
+    if (!reader->HasNextByte() || reader->TestNextByte() != str[i]) {
       break;
     }
 
-    reader->GetNextByteSkipWhitespace();
-  }
-
-  if (mismatch_index == 0) {
-    return JsonParsingResult::kTypeMismatch;
+    reader->GetNextByte();
   }
 
   return mismatch_index == len ? JsonParsingResult::kValidTypeMatch
@@ -39,33 +43,21 @@ JsonParsingResult JsonUtility::TryParseJsonValue(HistoricalReader* reader) {
   }
 
   // try all different json values
-  JsonParsingResult result = JsonNullParser::TryParseNull(reader);
-  if (result != JsonParsingResult::kTypeMismatch) {
-    return result;
+  using ParsingFuncPtr = JsonParsingResult (*)(HistoricalReader*);
+  static ParsingFuncPtr parsers[] = {
+      &JsonNullParser::TryParseNull,     &JsonBooleanParser::TryParseBool,
+      &JsonNumberParser::TryParseNumber, &JsonStringParser::TryParseString,
+      &JsonArrayParser::TryParseArray,   &JsonObjectParser::TryParseObject,
+  };
+
+  for (ParsingFuncPtr parser : parsers) {
+    JsonParsingResult result = parser(reader);
+    if (result != JsonParsingResult::kTypeMismatch) {
+      return result;
+    }
   }
 
-  result = JsonBooleanParser::TryParseBool(reader);
-  if (result != JsonParsingResult::kTypeMismatch) {
-    return result;
-  }
-
-  result = JsonNumberParser::TryParseNumber(reader);
-  if (result != JsonParsingResult::kTypeMismatch) {
-    return result;
-  }
-
-  result = JsonStringParser::TryParseString(reader);
-  if (result != JsonParsingResult::kTypeMismatch) {
-    return result;
-  }
-
-  result = JsonArrayParser::TryParseArray(reader);
-  if (result != JsonParsingResult::kTypeMismatch) {
-    return result;
-  }
-
-  result = JsonObjectParser::TryParseObject(reader);
-  return result;
+  return JsonParsingResult::kTypeMismatch;
 }
 
 JsonParsingResult JsonUtility::TryParseJsonRoot(HistoricalReader* reader) {
@@ -82,7 +74,7 @@ JsonParsingResult JsonUtility::TryParseJsonRoot(HistoricalReader* reader) {
 
   // if it's a valid match, make sure there is no additional characters
   if (result == JsonParsingResult::kValidTypeMatch &&
-      reader->GetNextByteSkipWhitespace() != EOF) {
+      reader->GetNextByte(true) != EOF) {
     result = JsonParsingResult::kInvalidTypeMatch;
   }
 

@@ -14,13 +14,13 @@ JsonParsingResult JsonArrayParser::TryParseArray(HistoricalReader* reader) {
 
   // if we don't read an opening [ character, then the next token can't be an
   // array
-  char last_byte = reader->TestNextByteSkipWhitespace();
+  char last_byte = reader->TestNextByte(true);
   if (last_byte != '[') {
     return JsonParsingResult::kTypeMismatch;
   }
 
   // at this point, it has to be an array, either valid or invalid
-  reader->GetNextByteSkipWhitespace();
+  reader->GetNextByte(true);
 
   // read array items
   bool has_to_read_value = false;
@@ -42,7 +42,7 @@ JsonParsingResult JsonArrayParser::TryParseArray(HistoricalReader* reader) {
     // 2.we didn't read a value, then we must read a ']'
     // otherwise, this is an invalid array
     bool read_a_value = result == JsonParsingResult::kValidTypeMatch;
-    last_byte = reader->GetNextByteSkipWhitespace();
+    last_byte = reader->GetNextByte(true);
     if ((read_a_value && last_byte != ',' && last_byte != ']') ||
         (!read_a_value && last_byte != ']')) {
       return JsonParsingResult::kInvalidTypeMatch;

@@ -12,19 +12,19 @@ JsonParsingResult JsonStringParser::TryParseString(HistoricalReader* reader) {
 
   // if we don't read the double quotation mark, then the next token can't be a
   // string
-  char last_byte = reader->TestNextByteSkipWhitespace();
+  char last_byte = reader->TestNextByte(true);
   if (last_byte != '"') {
     return JsonParsingResult::kTypeMismatch;
   }
 
   // at this point, it has to be a string, either valid or invalid
-  reader->GetNextByteNoSkipWhitespace();
+  reader->GetNextByte(true);
 
   // read bytes
   bool found_closing_double_quote = false;
   bool currently_escaping = false;
   while (reader->HasNextByte()) {
-    last_byte = reader->GetNextByteNoSkipWhitespace();
+    last_byte = reader->GetNextByte();
 
     // if we encounter a control character, that's an invalid byte
     if (iscntrl(last_byte)) {
@@ -48,7 +48,7 @@ JsonParsingResult JsonStringParser::TryParseString(HistoricalReader* reader) {
         case 'u': {
           int hex_digits = 0;
           while (reader->HasNextByte() && hex_digits < 4) {
-            last_byte = reader->GetNextByteNoSkipWhitespace();
+            last_byte = reader->GetNextByte();
             if (!ishexnumber(last_byte)) {
               return JsonParsingResult::kInvalidTypeMatch;
             }

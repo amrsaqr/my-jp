@@ -15,19 +15,19 @@ bool HistoricalReader::HasNextByte() const {
   return input_stream_->good() && !input_stream_->eof();
 }
 
-char HistoricalReader::TestNextByteSkipWhitespace() {
-  SkipWhitespace();
+char HistoricalReader::TestNextByte(bool skip_white_space) {
+  if (skip_white_space) {
+    SkipWhitespace();
+  }
+
   return static_cast<char>(input_stream_->peek());
 }
 
-char HistoricalReader::GetNextByteSkipWhitespace() {
-  SkipWhitespace();
-  char byte = static_cast<char>(input_stream_->get());
-  UpdateHistory(byte);
-  return byte;
-}
+char HistoricalReader::GetNextByte(bool skip_white_space) {
+  if (skip_white_space) {
+    SkipWhitespace();
+  }
 
-char HistoricalReader::GetNextByteNoSkipWhitespace() {
   char byte = static_cast<char>(input_stream_->get());
   UpdateHistory(byte);
   return byte;
