@@ -11,7 +11,7 @@ def run_tests(cpp_program, test_dir):
     # Recursively find all JSON files in the test directory
     for root, _, files in os.walk(test_dir):
         for file in files:
-            if file.endswith(".json"):
+            if file.endswith(".json.test"):
                 json_file_path = os.path.join(root, file)
                 print(f"Running test: {json_file_path}")
                 total_tests += 1
