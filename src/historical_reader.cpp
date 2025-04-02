@@ -7,9 +7,11 @@
 #include <cstdio>
 #include <string>
 
-HistoricalReader::HistoricalReader(istream* input_stream) {
-  input_stream_ = input_stream;
-}
+using std::ifstream;
+using std::string;
+
+HistoricalReader::HistoricalReader(ifstream* input_stream)
+    : input_stream_(input_stream) {}
 
 bool HistoricalReader::HasNextByte() const {
   return input_stream_->good() && !input_stream_->eof();
@@ -64,3 +66,5 @@ void HistoricalReader::UpdateHistory(char byte) {
     --history_length_no_ws;
   }
 }
+
+HistoricalReader::~HistoricalReader() { input_stream_->close(); }

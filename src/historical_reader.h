@@ -5,16 +5,13 @@
 #ifndef HISTORICAL_READER_H_
 #define HISTORICAL_READER_H_
 
-#include <istream>
+#include <fstream>
 #include <list>
 #include <string>
-using std::istream;
-using std::list;
-using std::string;
 
 class HistoricalReader {
  public:
-  explicit HistoricalReader(istream* input_stream);
+  explicit HistoricalReader(std::ifstream* input_stream);
 
   bool HasNextByte() const;
 
@@ -22,14 +19,16 @@ class HistoricalReader {
 
   char GetNextByte(bool skip_white_space = false);
 
-  string GetHistory() const;
+  std::string GetHistory() const;
+
+  virtual ~HistoricalReader();
 
  private:
   void SkipWhitespace();
   void UpdateHistory(char byte);
 
-  istream* input_stream_;
-  list<char> history_;
+  std::ifstream* input_stream_;
+  std::list<char> history_;
   size_t history_length_no_ws = 0;
   const size_t kMaxHistoryLength = 21;
 };

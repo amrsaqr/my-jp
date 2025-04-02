@@ -1,13 +1,12 @@
 //  Copyright 2025 Amr Saqr
 
-#include <fstream>
 #include <iostream>
+#include <string>
 
-#include "historical_reader.h"
-#include "json_utility.h"
+#include "json_parser.h"
 using std::cout;
 using std::endl;
-using std::ifstream;
+using std::string;
 
 int main(const int argc, const char* const argv[]) {
   if (argc != 2) {
@@ -15,24 +14,16 @@ int main(const int argc, const char* const argv[]) {
     return 1;
   }
 
-  ifstream input_file(argv[1]);
-  if (!input_file.is_open()) {
-    cout << "Unable to open file " << argv[1] << endl;
-    return 1;
-  }
+  JsonParser json_parser(argv[1]);
+  std::string error_output;
 
-  HistoricalReader reader(&input_file);
-
-  bool success = JsonUtility::TryParseJsonRoot(&reader) ==
-                 JsonParsingResult::kValidTypeMatch;
-  input_file.close();
-
-  if (success) {
+  bool successful_parsing = json_parser.Parse(&error_output);
+  if (successful_parsing) {
     cout << "Valid JSON" << endl;
   } else {
     cout << "Invalid JSON" << endl;
-    cout << reader.GetHistory() << endl;
+    cout << error_output << endl;
   }
 
-  return success ? 0 : 1;
+  return successful_parsing ? 0 : 1;
 }

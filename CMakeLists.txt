@@ -21,4 +21,6 @@ add_executable(my_jp src/main.cpp
         src/json_array_parser.h
         src/json_object_parser.cpp
         src/json_object_parser.h
+        src/json_parser.cpp
+        src/json_parser.h
 )
