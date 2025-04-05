@@ -66,5 +66,3 @@ void HistoricalReader::UpdateHistory(char byte) {
     --history_length_no_ws;
   }
 }
-
-HistoricalReader::~HistoricalReader() { input_stream_->close(); }

@@ -21,8 +21,6 @@ class HistoricalReader {
 
   std::string GetHistory() const;
 
-  virtual ~HistoricalReader();
-
  private:
   void SkipWhitespace();
   void UpdateHistory(char byte);
