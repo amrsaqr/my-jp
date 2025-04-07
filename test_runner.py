@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 
+
 def run_tests(cpp_program, test_dir):
     # Initialize counters
     total_tests = 0
@@ -17,9 +18,9 @@ def run_tests(cpp_program, test_dir):
                 total_tests += 1
 
                 # Determine the expected return code based on the file name
-                if "invalid" in file or "fail" in file:
+                if "fail" in file:
                     expected_return_code = 1
-                elif "valid" in file or "pass" in file:
+                elif "pass" in file:
                     expected_return_code = 0
                 else:
                     print(f"⚠️  Skipping test (unknown type): {json_file_path}")
@@ -45,6 +46,7 @@ def run_tests(cpp_program, test_dir):
     print(f"Total tests: {total_tests}")
     print(f"Passed tests: {passed_tests}")
     print(f"Failed tests: {failed_tests}")
+
 
 if __name__ == "__main__":
     # Check if the correct number of arguments is provided

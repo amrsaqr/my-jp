@@ -14,14 +14,14 @@ int main(const int argc, const char* const argv[]) {
     return 1;
   }
 
-  JsonParser json_parser(argv[1]);
-  std::string error_output;
+  JsonParser json_parser;
+  string error_output;
+  const string file_path(argv[1]);
 
-  bool successful_parsing = json_parser.Parse(&error_output);
+  bool successful_parsing = json_parser.Parse(file_path, &error_output);
   if (successful_parsing) {
     cout << "Valid JSON" << endl;
   } else {
-    cout << "Invalid JSON" << endl;
     cout << error_output << endl;
   }
 
