@@ -2,7 +2,7 @@
 //  Copyright 2025 Amr Saqr
 //
 
-#include "historical_reader.h"
+#include "limited_history_preserving_reader.h"
 
 #include <cstdio>
 #include <string>
@@ -10,14 +10,15 @@
 using std::ifstream;
 using std::string;
 
-HistoricalReader::HistoricalReader(ifstream* input_stream)
+LimitedHistoryPreservingReader::LimitedHistoryPreservingReader(
+    ifstream* input_stream)
     : input_stream_(input_stream) {}
 
-bool HistoricalReader::HasNextByte() const {
+bool LimitedHistoryPreservingReader::HasNextByte() const {
   return input_stream_->good() && !input_stream_->eof();
 }
 
-char HistoricalReader::TestNextByte(bool skip_white_space) {
+char LimitedHistoryPreservingReader::TestNextByte(bool skip_white_space) {
   if (skip_white_space) {
     SkipWhitespace();
   }
@@ -25,7 +26,7 @@ char HistoricalReader::TestNextByte(bool skip_white_space) {
   return static_cast<char>(input_stream_->peek());
 }
 
-char HistoricalReader::GetNextByte(bool skip_white_space) {
+char LimitedHistoryPreservingReader::GetNextByte(bool skip_white_space) {
   if (skip_white_space) {
     SkipWhitespace();
   }
@@ -35,18 +36,18 @@ char HistoricalReader::GetNextByte(bool skip_white_space) {
   return byte;
 }
 
-string HistoricalReader::GetHistory() const {
+string LimitedHistoryPreservingReader::GetHistory() const {
   string strHistory(history_.begin(), history_.end());
   return strHistory;
 }
 
-void HistoricalReader::SkipWhitespace() {
+void LimitedHistoryPreservingReader::SkipWhitespace() {
   while (HasNextByte() && isspace(input_stream_->peek())) {
     UpdateHistory(static_cast<char>(input_stream_->get()));
   }
 }
 
-void HistoricalReader::UpdateHistory(char byte) {
+void LimitedHistoryPreservingReader::UpdateHistory(char byte) {
   if (byte == EOF) {
     return;
   }

@@ -7,18 +7,20 @@
 
 #include <string>
 
-#include "historical_reader.h"
 #include "json_parsing_result.h"
+#include "limited_history_preserving_reader.h"
 
 class JsonParser {
  public:
   bool Parse(const std::string& file_path, std::string* error_output);
 
  private:
-  JsonParsingResult TryParseJsonRoot(HistoricalReader* historical_reader);
-  JsonParsingResult TryParseJsonValue(HistoricalReader* historical_reader);
-  JsonParsingResult TryParseObject(HistoricalReader* reader);
-  JsonParsingResult TryParseArray(HistoricalReader* reader);
+  JsonParsingResult TryParseJsonRoot(
+      LimitedHistoryPreservingReader* historical_reader);
+  JsonParsingResult TryParseJsonValue(
+      LimitedHistoryPreservingReader* historical_reader);
+  JsonParsingResult TryParseObject(LimitedHistoryPreservingReader* reader);
+  JsonParsingResult TryParseArray(LimitedHistoryPreservingReader* reader);
   static constexpr size_t kMaxJsonDepth = 19;
   size_t json_depth_ = 0;
 };

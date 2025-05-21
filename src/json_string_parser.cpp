@@ -4,7 +4,7 @@
 
 #include "json_string_parser.h"
 
-JsonParsingResult JsonStringParser::TryParseString(HistoricalReader* reader) {
+JsonParsingResult JsonStringParser::TryParseString(LimitedHistoryPreservingReader* reader) {
   // if stream ended, then there is nothing to read
   if (!reader->HasNextByte()) {
     return JsonParsingResult::kTypeMismatch;

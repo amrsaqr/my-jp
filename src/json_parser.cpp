@@ -7,10 +7,10 @@
 #include <fstream>
 #include <string>
 
-#include "historical_reader.h"
 #include "json_constant_parser.h"
 #include "json_number_parser.h"
 #include "json_string_parser.h"
+#include "limited_history_preserving_reader.h"
 using std::ifstream;
 using std::ios_base;
 using std::string;
@@ -25,7 +25,7 @@ bool JsonParser::Parse(const string& file_path, string* error_output) {
       return false;
     }
 
-    HistoricalReader reader(&input_stream);
+    LimitedHistoryPreservingReader reader(&input_stream);
     bool successful_parsing =
         TryParseJsonRoot(&reader) == JsonParsingResult::kValidTypeMatch;
 
@@ -41,7 +41,8 @@ bool JsonParser::Parse(const string& file_path, string* error_output) {
   }
 }
 
-JsonParsingResult JsonParser::TryParseJsonRoot(HistoricalReader* reader) {
+JsonParsingResult JsonParser::TryParseJsonRoot(
+    LimitedHistoryPreservingReader* reader) {
   // if stream ended, then there is nothing to read
   if (!reader->HasNextByte()) {
     return JsonParsingResult::kTypeMismatch;
@@ -62,7 +63,8 @@ JsonParsingResult JsonParser::TryParseJsonRoot(HistoricalReader* reader) {
   return result;
 }
 
-JsonParsingResult JsonParser::TryParseJsonValue(HistoricalReader* reader) {
+JsonParsingResult JsonParser::TryParseJsonValue(
+    LimitedHistoryPreservingReader* reader) {
   // if stream ended, then there is nothing to read
   if (!reader->HasNextByte()) {
     return JsonParsingResult::kTypeMismatch;
@@ -70,7 +72,7 @@ JsonParsingResult JsonParser::TryParseJsonValue(HistoricalReader* reader) {
 
   // try all different json values
   // start with primitive values
-  using ParsingFuncPtr = JsonParsingResult (*)(HistoricalReader*);
+  using ParsingFuncPtr = JsonParsingResult (*)(LimitedHistoryPreservingReader*);
   static ParsingFuncPtr parsers[] = {
       &JsonConstantParser::TryParseNull, &JsonConstantParser::TryParseBool,
       &JsonNumberParser::TryParseNumber, &JsonStringParser::TryParseString};
@@ -90,7 +92,7 @@ JsonParsingResult JsonParser::TryParseJsonValue(HistoricalReader* reader) {
 
   // then try object and array
   using ThisParsingFuncPtr =
-      JsonParsingResult (JsonParser::*)(HistoricalReader*);
+      JsonParsingResult (JsonParser::*)(LimitedHistoryPreservingReader*);
   static ThisParsingFuncPtr this_parsers[] = {&JsonParser::TryParseObject,
                                               &JsonParser::TryParseArray};
 
@@ -104,7 +106,8 @@ JsonParsingResult JsonParser::TryParseJsonValue(HistoricalReader* reader) {
   return JsonParsingResult::kTypeMismatch;
 }
 
-JsonParsingResult JsonParser::TryParseObject(HistoricalReader* reader) {
+JsonParsingResult JsonParser::TryParseObject(
+    LimitedHistoryPreservingReader* reader) {
   // if stream ended, then there is nothing to read
   if (!reader->HasNextByte()) {
     return JsonParsingResult::kTypeMismatch;
@@ -177,7 +180,8 @@ JsonParsingResult JsonParser::TryParseObject(HistoricalReader* reader) {
                           : JsonParsingResult::kInvalidTypeMatch;
 }
 
-JsonParsingResult JsonParser::TryParseArray(HistoricalReader* reader) {
+JsonParsingResult JsonParser::TryParseArray(
+    LimitedHistoryPreservingReader* reader) {
   // if stream ended, then there is nothing to read
   if (!reader->HasNextByte()) {
     return JsonParsingResult::kTypeMismatch;

@@ -4,11 +4,13 @@
 
 #include "json_constant_parser.h"
 
-JsonParsingResult JsonConstantParser::TryParseNull(HistoricalReader* reader) {
+JsonParsingResult JsonConstantParser::TryParseNull(
+    LimitedHistoryPreservingReader* reader) {
   return TryParseJsonConstant(reader, "null", 4);
 }
 
-JsonParsingResult JsonConstantParser::TryParseBool(HistoricalReader* reader) {
+JsonParsingResult JsonConstantParser::TryParseBool(
+    LimitedHistoryPreservingReader* reader) {
   JsonParsingResult parsing_result = TryParseJsonConstant(reader, "true", 4);
 
   if (parsing_result == JsonParsingResult::kTypeMismatch) {
@@ -19,7 +21,8 @@ JsonParsingResult JsonConstantParser::TryParseBool(HistoricalReader* reader) {
 }
 
 JsonParsingResult JsonConstantParser::TryParseJsonConstant(
-    HistoricalReader* reader, const char* const str, const size_t len) {
+    LimitedHistoryPreservingReader* reader, const char* const str,
+    const size_t len) {
   if (!reader->HasNextByte() || reader->TestNextByte(true) != str[0]) {
     return JsonParsingResult::kTypeMismatch;
   }

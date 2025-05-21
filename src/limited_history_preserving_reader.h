@@ -2,16 +2,16 @@
 //  Copyright 2025 Amr Saqr
 //
 
-#ifndef HISTORICAL_READER_H_
-#define HISTORICAL_READER_H_
+#ifndef LIMITED_HISTORY_PRESERVING_READER_H_
+#define LIMITED_HISTORY_PRESERVING_READER_H_
 
 #include <fstream>
 #include <list>
 #include <string>
 
-class HistoricalReader {
+class LimitedHistoryPreservingReader {
  public:
-  explicit HistoricalReader(std::ifstream* input_stream);
+  explicit LimitedHistoryPreservingReader(std::ifstream* input_stream);
 
   bool HasNextByte() const;
 
@@ -31,4 +31,4 @@ class HistoricalReader {
   const size_t kMaxHistoryLength = 21;
 };
 
-#endif  // HISTORICAL_READER_H_
+#endif  // LIMITED_HISTORY_PRESERVING_READER_H_
