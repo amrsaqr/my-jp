@@ -30,7 +30,17 @@ bool JsonParser::Parse(const string& file_path, string* error_output) {
         TryParseJsonRoot(&reader) == JsonParsingResult::kValidTypeMatch;
 
     if (!successful_parsing) {
+      // assign the latest history first
       *error_output = reader.GetHistory();
+
+      // then assign the errors top to bottom with indentation
+      size_t spaces = 0;
+      for (auto rit = parsing_errors_.rbegin(); rit != parsing_errors_.rend();
+           ++rit) {
+        *error_output += '\n';
+        *error_output += string(spaces++, ' ');
+        *error_output += *rit;
+      }
     }
 
     return successful_parsing;
@@ -50,13 +60,26 @@ JsonParsingResult JsonParser::TryParseJsonRoot(
 
   // try json object and json array for the root
   JsonParsingResult result = TryParseObject(reader);
+  if (result == JsonParsingResult::kInvalidTypeMatch) {
+    AddParsingError(kErrInvalidObject);
+  }
   if (result == JsonParsingResult::kTypeMismatch) {
     result = TryParseArray(reader);
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidArray);
+    }
   }
 
-  // if it's a valid match, make sure there is no additional characters
+  // if it's a type mismatch, then we could neither read a valid object, nor a
+  // valid array
+  if (result == JsonParsingResult::kTypeMismatch) {
+    AddParsingError(kErrInvalidRoot);
+  }
+
+  // if it's a valid match, make sure there are no additional characters
   if (result == JsonParsingResult::kValidTypeMatch &&
       reader->GetNextByte(true) != EOF) {
+    AddParsingError(kErrAdditionalCharacters);
     result = JsonParsingResult::kInvalidTypeMatch;
   }
 
@@ -71,36 +94,59 @@ JsonParsingResult JsonParser::TryParseJsonValue(
   }
 
   // try all different json values
-  // start with primitive values
-  using ParsingFuncPtr = JsonParsingResult (*)(LimitedHistoryPreservingReader*);
-  static ParsingFuncPtr parsers[] = {
-      &JsonConstantParser::TryParseNull, &JsonConstantParser::TryParseBool,
-      &JsonNumberParser::TryParseNumber, &JsonStringParser::TryParseString};
-
-  for (ParsingFuncPtr parser : parsers) {
-    JsonParsingResult result = parser(reader);
-    if (result != JsonParsingResult::kTypeMismatch) {
-      return result;
+  JsonParsingResult result = JsonConstantParser::TryParseNull(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidNull);
     }
+    return result;
+  }
+
+  result = JsonConstantParser::TryParseBool(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidBool);
+    }
+    return result;
+  }
+
+  result = JsonNumberParser::TryParseNumber(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidNumber);
+    }
+    return result;
+  }
+
+  result = JsonStringParser::TryParseString(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidString);
+    }
+    return result;
   }
 
   // now that we're only left with either object or array, we need to check the
   // depth first
   if (json_depth_ >= kMaxJsonDepth) {
+    AddParsingError(kErrMaxDepthReached);
     return JsonParsingResult::kTypeMismatch;
   }
 
-  // then try object and array
-  using ThisParsingFuncPtr =
-      JsonParsingResult (JsonParser::*)(LimitedHistoryPreservingReader*);
-  static ThisParsingFuncPtr this_parsers[] = {&JsonParser::TryParseObject,
-                                              &JsonParser::TryParseArray};
-
-  for (ThisParsingFuncPtr parser : this_parsers) {
-    JsonParsingResult result = (this->*parser)(reader);
-    if (result != JsonParsingResult::kTypeMismatch) {
-      return result;
+  result = TryParseObject(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidObject);
     }
+    return result;
+  }
+
+  result = TryParseArray(reader);
+  if (result != JsonParsingResult::kTypeMismatch) {
+    if (result == JsonParsingResult::kInvalidTypeMatch) {
+      AddParsingError(kErrInvalidArray);
+    }
+    return result;
   }
 
   return JsonParsingResult::kTypeMismatch;
@@ -135,6 +181,7 @@ JsonParsingResult JsonParser::TryParseObject(
     JsonParsingResult result = JsonStringParser::TryParseString(reader);
     if (result == JsonParsingResult::kInvalidTypeMatch ||
         (has_to_read_key && result != JsonParsingResult::kValidTypeMatch)) {
+      AddParsingError(kErrObjectKeyExpected);
       return JsonParsingResult::kInvalidTypeMatch;
     }
 
@@ -143,24 +190,30 @@ JsonParsingResult JsonParser::TryParseObject(
     if (result == JsonParsingResult::kValidTypeMatch) {
       // read the colon
       if (!reader->HasNextByte() || reader->GetNextByte(true) != ':') {
+        AddParsingError(kErrObjectColonExpected);
         return JsonParsingResult::kInvalidTypeMatch;
       }
 
       // if we couldn't read a json value, then this is an invalid object
       if (result = TryParseJsonValue(reader);
           result != JsonParsingResult::kValidTypeMatch) {
+        AddParsingError(kErrObjectValueExpected);
         return JsonParsingResult::kInvalidTypeMatch;
       }
     }
 
-    // at this point there are two possibilities
+    // at this point, there are two possibilities
     // 1.we read a kv pair, then we should either read ',' or '}'
     // 2.we didn't read a kv pair, then we must read a '}'
     // otherwise, this is an invalid object
     bool read_a_kv = result == JsonParsingResult::kValidTypeMatch;
     last_byte = reader->GetNextByte(true);
-    if ((read_a_kv && last_byte != ',' && last_byte != '}') ||
-        (!read_a_kv && last_byte != '}')) {
+    if (read_a_kv && last_byte != ',' && last_byte != '}') {
+      AddParsingError(kErrObjectCommaOrClosureExpected);
+      return JsonParsingResult::kInvalidTypeMatch;
+    }
+    if (!read_a_kv && last_byte != '}') {
+      AddParsingError(kErrObjectClosureExpected);
       return JsonParsingResult::kInvalidTypeMatch;
     }
 
@@ -176,8 +229,7 @@ JsonParsingResult JsonParser::TryParseObject(
   // since we're done parsing the object, we need to decrease the depth
   --json_depth_;
 
-  return last_byte == '}' ? JsonParsingResult::kValidTypeMatch
-                          : JsonParsingResult::kInvalidTypeMatch;
+  return JsonParsingResult::kValidTypeMatch;
 }
 
 JsonParsingResult JsonParser::TryParseArray(
@@ -209,6 +261,7 @@ JsonParsingResult JsonParser::TryParseArray(
     JsonParsingResult result = TryParseJsonValue(reader);
     if (result == JsonParsingResult::kInvalidTypeMatch ||
         (has_to_read_value && result != JsonParsingResult::kValidTypeMatch)) {
+      AddParsingError(kErrArrayValueExpected);
       return JsonParsingResult::kInvalidTypeMatch;
     }
 
@@ -218,8 +271,12 @@ JsonParsingResult JsonParser::TryParseArray(
     // otherwise, this is an invalid array
     bool read_a_value = result == JsonParsingResult::kValidTypeMatch;
     last_byte = reader->GetNextByte(true);
-    if ((read_a_value && last_byte != ',' && last_byte != ']') ||
-        (!read_a_value && last_byte != ']')) {
+    if (read_a_value && last_byte != ',' && last_byte != ']') {
+      AddParsingError(kErrArrayCommaOrClosureExpected);
+      return JsonParsingResult::kInvalidTypeMatch;
+    }
+    if (!read_a_value && last_byte != ']') {
+      AddParsingError(kErrArrayClosureExpected);
       return JsonParsingResult::kInvalidTypeMatch;
     }
 
@@ -235,6 +292,9 @@ JsonParsingResult JsonParser::TryParseArray(
   // since we're done parsing the array, we need to decrease the depth
   --json_depth_;
 
-  return last_byte == ']' ? JsonParsingResult::kValidTypeMatch
-                          : JsonParsingResult::kInvalidTypeMatch;
+  return JsonParsingResult::kValidTypeMatch;
+}
+
+void JsonParser::AddParsingError(const char* const parsing_error) {
+  parsing_errors_.emplace_back(parsing_error);
 }
